@@ -3,4 +3,13 @@ name = "credit-card-fraud-detection"
 version = "0.1.0"
 description = "A cloud-native, end-to-end real-time fraud detection system leveraging Apache Spark Streaming, Kafka, Cassandra, and Airflow, orchestrated entirely on Kubernetes"
 requires-python = ">=3.11"
-dependencies = []
+authors = ["@gagansingh894"]
+dependencies = [
+    "cassandra-driver<=3.29",
+    "pyspark<=3.5.6",
+]
+
+[project.optional-dependencies]
+cassandra = [
+
+]
