@@ -1,0 +1,76 @@
+services:
+  cassandra1:
+    image: cassandra:4.1
+    container_name: cassandra1
+    environment:
+      - CASSANDRA_CLUSTER_NAME=fraud-cluster
+      - CASSANDRA_DC=dc1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_NUM_TOKENS=256
+      - MAX_HEAP_SIZE=512M   # JVM heap max
+      - HEAP_NEWSIZE=256M    # JVM young generation
+    deploy:
+      resources:
+        limits:
+          memory: 1g          # limit container memory to 1GB
+    ports:
+      - "9042:9042"   # CQL
+      - "9160:9160"   # Thrift (optional, legacy)
+  cassandra2:
+    image: cassandra:4.1
+    container_name: cassandra2
+    environment:
+      - CASSANDRA_CLUSTER_NAME=fraud-cluster
+      - CASSANDRA_DC=dc1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_NUM_TOKENS=256
+      - MAX_HEAP_SIZE=512M   # JVM heap max
+      - HEAP_NEWSIZE=256M    # JVM young generation
+    deploy:
+      resources:
+        limits:
+          memory: 1g          # limit container memory to 1GB
+    ports:
+      - "9043:9042"   # CQL
+      - "9161:9160"   # Thrift (optional, legacy)
+  cassandra-init:
+    image: cassandra:4.1
+    depends_on:
+      - cassandra1
+      - cassandra2
+    entrypoint: >
+      bash -c "
+        echo 'Waiting for Cassandra nodes...';
+        until cqlsh cassandra1 9042 -e 'describe cluster'; do
+          echo 'Waiting for cassandra1...';
+          sleep 5;
+        done;
+        until cqlsh cassandra2 9042 -e 'describe cluster'; do
+          echo 'Waiting for cassandra2...';
+          sleep 5;
+        done;
+        echo 'Nodes are ready. Running CQL scripts...';
+        cqlsh cassandra1 9042 -f /creditcard.cql
+      "
+    volumes:
+      - ./creditcard.cql:/creditcard.cql
+  spark-master:
+    image: bitnami/spark:3.5
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+  spark-worker:
+    image: bitnami/spark:3.5
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+    depends_on:
+      - spark-master
