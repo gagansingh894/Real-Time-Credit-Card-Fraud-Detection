@@ -2,19 +2,19 @@
 .PHONY: help
 help:
 	@echo "Available commands:"
-	@echo "  make setup-cassandra			- Start Cassandra cluster using Docker Compose"
-	@echo "  make teardown-cassandra        - Stop Cassandra cluster and remove containers"
+	@echo "  make setup						- Start Cassandra, Spark cluster using Docker Compose"
+	@echo "  make teardown        			- Stop Cassandra cluster and remove containers"
 	@echo "  make logs      				- View logs of Cassandra containers"
 	@echo "  make cqlsh     				- Connect to cassandra1 using cqlsh"
 
 # Start the cluster
-.PHONY: setup-cassandra
-setup-cassandra:
+.PHONY: setup
+setup:
 	docker-compose -f build/docker-compose.yml up -d
 
 # Stop the cluster
-.PHONY: teardown-cassandra
-teardown-cassandra:
+.PHONY: teardown
+teardown:
 	docker-compose -f build/docker-compose.yml down
 
 # View logs

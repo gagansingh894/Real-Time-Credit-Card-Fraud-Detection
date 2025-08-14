@@ -1,0 +1,6 @@
+from spark_jobs.schemas.customers import customer_schema
+from spark_jobs.schemas.transactions import transaction_schema, fraud_checked_transaction_schema
+
+customer_schema = customer_schema
+transaction_schema = transaction_schema
+fraud_checked_transaction_schema = fraud_checked_transaction_schema
