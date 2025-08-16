@@ -118,16 +118,16 @@ services:
       - postgres
     environment:
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      MLFLOW_HOST: 0.0.0.0
+      MLFLOW_PORT: 5005
     command: >
       bash -c "
         pip install mlflow[extras] psycopg2-binary &&
         mlflow server \
           --backend-store-uri postgresql+psycopg2://mlflow:mlflow123@postgres:5432/mlflow_db \
           --default-artifact-root s3://mlflow/ \
-          --host 0.0.0.0 \
-          --port 5000
       "
     ports:
-      - "5001:5000"
+      - "5005:5005"
     volumes:
       - ./mlflow:/mlflow
