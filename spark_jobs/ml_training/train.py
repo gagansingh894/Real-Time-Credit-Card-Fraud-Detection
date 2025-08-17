@@ -1,4 +1,8 @@
-from pyspark.ml import Pipeline
+import uuid
+from datetime import datetime
+
+import mlflow.spark
+from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
 from pyspark.sql import SparkSession, DataFrame
@@ -17,7 +21,7 @@ def _read_data_from_cassandra(spark: SparkSession, keyspace:str, table_name: str
             .select("cc_num", "category", "merchant", "distance", "amt", "age", "is_fraud")
     )
 
-def preprocessing_pipeline(spark: SparkSession, keyspace:str) -> DataFrame:
+def preprocessing_pipeline(spark: SparkSession, keyspace:str) -> tuple[DataFrame, PipelineModel]:
     # prepare training data
     fraud_df = _read_data_from_cassandra(spark, keyspace, "fraud_transactions")
     non_fraud_df = _read_data_from_cassandra(spark, keyspace, table_name="non_fraud_transactions")
@@ -36,11 +40,11 @@ def preprocessing_pipeline(spark: SparkSession, keyspace:str) -> DataFrame:
 
     pipeline = Pipeline(stages=indexers + encoders + [assembler])
 
-    preprocessor_pipeline = pipeline.fit(transactions_df)
-    preprocessor_pipeline.write().overwrite().save(PREPROCESSOR_PATH)
+    preprocessor_pipeline_model = pipeline.fit(transactions_df)
+    # preprocessor_pipeline.write().overwrite().save(PREPROCESSOR_PATH)
 
-    features_df = preprocessor_pipeline.transform(transactions_df)
-    return features_df
+    features_df = preprocessor_pipeline_model.transform(transactions_df)
+    return features_df, preprocessor_pipeline_model
 
 def balance_features_dataframe(features_df: DataFrame) -> DataFrame:
     fraud_features_with_label_df = features_df.filter(features_df.is_fraud == 1) \
@@ -57,7 +61,17 @@ def balance_features_dataframe(features_df: DataFrame) -> DataFrame:
     final_df = fraud_features_with_label_df.union(non_fraud_features_with_label_balanced_df)
     return final_df
 
-def train_and_save_model(train_df: DataFrame) -> None:
+def train_model(train_df: DataFrame) -> PipelineModel:
     random_forest = RandomForestClassifier(featuresCol="features", labelCol="label", numTrees=10)
-    random_forest.fit(train_df)
-    random_forest.write().overwrite().save(RANDOM_FOREST_MODEL_PATH)
+    pipeline = Pipeline(stages=[random_forest])
+    pipeline_model = pipeline.fit(train_df)
+
+    return pipeline_model
+    # mlflow.spark.save_model(random_forest, f"random_forest_{str(datetime.now())}")
+    # random_forest.write().overwrite().save(RANDOM_FOREST_MODEL_PATH)
+
+def persist_artefacts(preprocessor_pipeline: PipelineModel, trained_model: PipelineModel) -> None:
+    with mlflow.start_run():
+        version = uuid.uuid4()
+        mlflow.spark.log_model(spark_model=preprocessor_pipeline, artifact_path=f"preprocessor_pipeline_{version}")
+        mlflow.spark.log_model(spark_model=trained_model, artifact_path=f"model_{version}")
