@@ -91,14 +91,29 @@ services:
     image: minio/minio:latest
     container_name: minio
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     command: server /data --console-address ":9009"
     ports:
       - "9000:9000"
       - "9009:9009"
     volumes:
       - ./minio-data:/data
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      bash -c "
+        echo 'Waiting for MinIO...';
+        until (mc alias set myminio http://minio:9000 minioadmin minioadmin); do
+          echo 'Waiting for MinIO to start...';
+          sleep 5;
+        done;
+        echo 'Creating bucket mlflow...';
+        mc mb -p myminio/mlflow || echo 'Bucket already exists';
+        mc ls myminio
+      "
   postgres:
     image: postgres:15
     container_name: postgres
@@ -117,7 +132,11 @@ services:
       - minio
       - postgres
     environment:
+      BACKEND_STORE_URI: postgresql+psycopg2://mlflow:mlflow@postgres:5432/mlflow
+      ARTIFACT_ROOT: s3://mlflow/
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
       MLFLOW_HOST: 0.0.0.0
       MLFLOW_PORT: 5005
     command: >

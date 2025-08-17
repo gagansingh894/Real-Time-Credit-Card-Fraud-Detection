@@ -1,7 +1,6 @@
 import uuid
-from datetime import datetime
 
-import mlflow.spark
+import mlflow
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
@@ -67,10 +66,11 @@ def train_model(train_df: DataFrame) -> PipelineModel:
     pipeline_model = pipeline.fit(train_df)
 
     return pipeline_model
-    # mlflow.spark.save_model(random_forest, f"random_forest_{str(datetime.now())}")
-    # random_forest.write().overwrite().save(RANDOM_FOREST_MODEL_PATH)
 
 def persist_artefacts(preprocessor_pipeline: PipelineModel, trained_model: PipelineModel) -> None:
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+
     with mlflow.start_run():
         version = uuid.uuid4()
         mlflow.spark.log_model(spark_model=preprocessor_pipeline, artifact_path=f"preprocessor_pipeline_{version}")
