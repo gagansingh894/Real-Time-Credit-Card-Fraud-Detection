@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import split, col, concat_ws, to_timestamp, date_diff, current_date, broadcast, round
 from pyspark.sql.types import IntegerType
 
-from spark_jobs.etl.config import CASSANDRA_KEYSPACE
+from spark_jobs.utils.config import CASSANDRA_KEYSPACE
 from spark_jobs.schemas import *
 from spark_jobs.utils import haversine_distance
 

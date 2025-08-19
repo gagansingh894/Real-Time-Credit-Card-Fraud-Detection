@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 
-from spark_jobs.etl.config import *
+from spark_jobs.utils.config import *
 
 def get_spark_session(app_name: str) -> SparkSession:
     return (

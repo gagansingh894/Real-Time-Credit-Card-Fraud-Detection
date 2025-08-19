@@ -1,8 +1,8 @@
 import logging
-from spark_jobs.etl import config
+from spark_jobs.utils import config
 from spark_jobs.etl.ingest import load_customer_data, load_transaction_data, transform_transaction_dates, \
     calculate_customer_age, process_data, write_to_cassandra
-from spark_jobs.etl.session import get_spark_session
+from spark_jobs.utils.session import get_spark_session
 
 logger = logging.getLogger(__name__)
 
