@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 authors = ["@gagansingh894"]
 dependencies = [
     "cassandra-driver<=3.29",
+    "confluent-kafka==2.10",
     "mlflow==3.2",
     "numpy==2.2",
     "pyspark<=3.5.6",
