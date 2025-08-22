@@ -13,14 +13,19 @@ from spark_jobs.utils.config import (
 )
 
 
-def get_pipeline_model() -> PipelineModel:
+def get_artefacts() -> (PipelineModel, PipelineModel):
     """
-    Retrieves the spark pipeline model from MLflow
+    Retrieves the spark pipeline models from MLFlow - preprocessor and model
     """
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
-    pipeline = mlflow.spark.load_model("model")
-    return pipeline
+    runs = mlflow.search_runs(experiment_names=[MLFLOW_EXPERIMENT_NAME])
+    run_id = runs[0].info.run_id
+
+
+    preprocessor = mlflow.spark.load_model(f"runs:/{run_id}/preprocessor")
+    model = mlflow.spark.load_model(f"runs:/{run_id}/model")
+    return preprocessor, model
 
 
 def read_and_cache_customer_data(spark: SparkSession) -> DataFrame:
@@ -76,12 +81,12 @@ def write_to_cassandra(batch_df: DataFrame, _: int):
         .options(table="non_fraud_transactions", keyspace=CASSANDRA_KEYSPACE).save()
 
 
-def preprocess_predict_stream(customer_df: DataFrame, kafka_df: DataFrame, pipeline_model: PipelineModel):
+def preprocess_predict_persist(customer_df: DataFrame, parsed_df: DataFrame, preprocessor: PipelineModel, model: PipelineModel):
     """
     Preprocess, predict and persist streaming data
     """
     processed_df = (
-        kafka_df
+        parsed_df
         .join(broadcast(customer_df), on="cc_num", how="inner")
         .withColumn(
             "distance",
@@ -90,7 +95,7 @@ def preprocess_predict_stream(customer_df: DataFrame, kafka_df: DataFrame, pipel
         .select(PROCESSED_DF_COLUMNS)
     )
 
-    predictions_df = pipeline_model.transform(processed_df).withColumnRenamed("prediction", "is_fraud")
+    predictions_df = model.transform(preprocessor.transform(processed_df)).withColumnRenamed("prediction", "is_fraud")
 
     # Use foreachBatch for custom Cassandra writes
     query = (
