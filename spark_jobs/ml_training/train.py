@@ -38,12 +38,10 @@ def preprocessing_pipeline(spark: SparkSession, keyspace:str) -> tuple[DataFrame
     )
 
     pipeline = Pipeline(stages=indexers + encoders + [assembler])
+    preprocessor = pipeline.fit(transactions_df)
+    features_df = preprocessor.transform(transactions_df)
 
-    preprocessor_pipeline_model = pipeline.fit(transactions_df)
-    # preprocessor_pipeline.write().overwrite().save(PREPROCESSOR_PATH)
-
-    features_df = preprocessor_pipeline_model.transform(transactions_df)
-    return features_df, preprocessor_pipeline_model
+    return features_df, preprocessor
 
 def balance_features_dataframe(features_df: DataFrame) -> DataFrame:
     fraud_features_with_label_df = features_df.filter(features_df.is_fraud == 1) \
@@ -60,19 +58,17 @@ def balance_features_dataframe(features_df: DataFrame) -> DataFrame:
     final_df = fraud_features_with_label_df.union(non_fraud_features_with_label_balanced_df)
     return final_df
 
-def train_model(train_df: DataFrame) -> PipelineModel:
+def train_model(train_df: DataFrame, preprocessor: PipelineModel) -> PipelineModel:
     random_forest = RandomForestClassifier(featuresCol="features", labelCol="label", numTrees=10)
-    pipeline = Pipeline(stages=[random_forest])
-    pipeline_model = pipeline.fit(train_df)
+    pipeline = Pipeline(stages=[preprocessor, random_forest])
+    return pipeline.fit(train_df)
 
-    return pipeline_model
 
 # todo: update persisting logic - log metrics, model name etc
-def persist_artefacts(preprocessor_pipeline: PipelineModel, trained_model: PipelineModel) -> None:
+def persist_artefact(pipeline: PipelineModel) -> None:
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
     with mlflow.start_run():
         version = uuid.uuid4()
-        mlflow.spark.log_model(spark_model=preprocessor_pipeline, artifact_path=f"preprocessor_pipeline_{version}")
-        mlflow.spark.log_model(spark_model=trained_model, artifact_path=f"model_{version}")
+        mlflow.spark.log_model(spark_model=pipeline, artifact_path=f"pipeline_{version}")
