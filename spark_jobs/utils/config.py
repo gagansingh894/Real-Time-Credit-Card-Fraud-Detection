@@ -1,4 +1,4 @@
-CASSANDRA_HOST = '0.0.0.0'
+CASSANDRA_HOST = 'cassandra'
 CASSANDRA_PORT = 9042
 
 CUSTOMER_DATA_PATH = 'spark_jobs/data/customer.csv'
@@ -16,5 +16,7 @@ KAFKA_TOPIC = 'transactions'
 PREPROCESSOR_PATH = 'spark_jobs/ml_training/artefacts/preprocessing'
 RANDOM_FOREST_MODEL_PATH = 'spark_jobs/ml_training/artefacts/randomforest'
 
-MLFLOW_TRACKING_URI = 'http://0.0.0.0:5005'
+MLFLOW_TRACKING_URI = 'http:mlflow:5005'
 MLFLOW_EXPERIMENT_NAME = 'fraud-detection'
+
+SPARK_MASTER = 'spark://spark-master:7077'
