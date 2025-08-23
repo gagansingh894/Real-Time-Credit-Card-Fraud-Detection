@@ -1,8 +1,8 @@
 CASSANDRA_HOST = 'cassandra'
 CASSANDRA_PORT = 9042
 
-CUSTOMER_DATA_PATH = 'spark_jobs/data/customer.csv'
-TRANSACTION_DATA_PATH = 'spark_jobs/data/transactions.csv'
+CUSTOMER_DATA_PATH = '/opt/airflow/spark_jobs/data/customer.csv'
+TRANSACTION_DATA_PATH = '/opt/airflow/spark_jobs/data/transactions.csv'
 
 PROCESSED_DF_COLUMNS = ["cc_num", "trans_num", "trans_time", "category", "merchant", "amt", "merch_lat", "merch_long", "distance", "age", "is_fraud"]
 
