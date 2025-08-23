@@ -1,4 +1,4 @@
-# 🚀 Credit Card Fraud Detection (E2E System)
+# 🚀 Credit Card Fraud Detection System
 
 This project is an **end-to-end system** for detecting fraudulent credit card transactions.  
 It integrates **data engineering, model training, and experiment tracking** into a production-ready architecture.  
@@ -24,12 +24,12 @@ The system is being extended with **streaming ingestion (Kafka + Spark Streaming
 5. **MLflow Tracking Server** → Logs trained models and experiment metadata.  
    - **MinIO** → Stores ML models and artifacts.  
    - **Postgres** → Stores MLflow experiment and run metadata.  
-
+6. **Stream Processing Job** -> Consumes new transactions from kafka stream, transform, predict and persist 
+7. **Kafka Producer** -> Generates transactions and publishes to topic
 ---
 
 ## 🔮 Planned Extensions
-- **Kafka Producer** → Mock producer to stream transactions.  
-- **Spark Streaming** → Real-time ingestion and feature transformation.  
+
 - **Fraud Monitoring UI** → Dashboard for monitoring and reviewing suspicious transactions.  
 
 ---
@@ -37,6 +37,7 @@ The system is being extended with **streaming ingestion (Kafka + Spark Streaming
 ## 🛠️ Tech Stack
 - **Apache Spark** (Batch + Streaming)  
 - **Apache Cassandra** (Database + Feature store)  
+- **Apache Kafka** (Real-time transaction streaming) 
 - **MLflow** (Experiment tracking & model registry)  
 - **MinIO** (Artifact storage)  
 - **Postgres** (Metadata store)  
