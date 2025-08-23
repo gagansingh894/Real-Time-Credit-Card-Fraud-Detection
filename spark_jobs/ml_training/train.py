@@ -76,7 +76,7 @@ def train_model(df: DataFrame) -> (PipelineModel, DataFrame):
     :return: tuple of Pipeline model and test dataframe
     """
     # train test split
-    train_df, test_df = df.randomSplit([0.7, 0.3], seed=42)
+    train_df, test_df = _train_test_split_with_stratified_sampling(df)
 
     rf = RandomForestClassifier(featuresCol="features", labelCol="label", weightCol="class_weight", numTrees=100, seed=42)
     pipeline = Pipeline(stages=[rf])
@@ -117,3 +117,16 @@ def persist_artefacts(preprocessor_pipeline: PipelineModel, trained_model: Pipel
 
         mlflow.spark.log_model(spark_model=preprocessor_pipeline, artifact_path=f"preprocessor")
         mlflow.spark.log_model(spark_model=trained_model, artifact_path=f"model")
+
+
+def _train_test_split_with_stratified_sampling(df: DataFrame) -> (PipelineModel, DataFrame):
+    # fractions of each class to keep in training set
+    fractions = {
+        0: 0.7,
+        1: 0.7
+    }
+
+    train_df = df.stat.sampleBy("label", fractions=fractions, seed=42)
+    test_df = df.subtract(train_df)
+
+    return train_df, test_df
