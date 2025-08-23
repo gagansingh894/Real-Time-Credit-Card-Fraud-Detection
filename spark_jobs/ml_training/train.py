@@ -73,6 +73,5 @@ def persist_artefacts(preprocessor_pipeline: PipelineModel, trained_model: Pipel
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
     with mlflow.start_run():
-        version = uuid.uuid4()
-        mlflow.spark.log_model(spark_model=preprocessor_pipeline, artifact_path=f"preprocessor_pipeline_{version}")
-        mlflow.spark.log_model(spark_model=trained_model, artifact_path=f"model_{version}")
+        mlflow.spark.log_model(spark_model=preprocessor_pipeline, artifact_path=f"preprocessor")
+        mlflow.spark.log_model(spark_model=trained_model, artifact_path=f"model")

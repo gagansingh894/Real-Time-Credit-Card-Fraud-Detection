@@ -27,5 +27,3 @@ if __name__ == "__main__":
     logger.info("Starting ML training job")
     train_model_job()
     logger.info("ML training job completed")
-
-

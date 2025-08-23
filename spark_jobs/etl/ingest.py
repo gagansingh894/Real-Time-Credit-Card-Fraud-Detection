@@ -2,11 +2,9 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import split, col, concat_ws, to_timestamp, date_diff, current_date, broadcast, round
 from pyspark.sql.types import IntegerType
 
-from spark_jobs.utils.config import CASSANDRA_KEYSPACE
+from spark_jobs.utils.config import CASSANDRA_KEYSPACE, PROCESSED_DF_COLUMNS
 from spark_jobs.schemas import *
 from spark_jobs.utils import haversine_distance
-
-PROCESSED_DF_COLUMNS = ["cc_num", "trans_num", "trans_time", "category", "merchant", "amt", "merch_lat", "merch_long", "distance", "age", "is_fraud"]
 
 def load_customer_data(spark: SparkSession, customer_data_path: str) -> DataFrame:
     """

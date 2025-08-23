@@ -5,7 +5,12 @@ from confluent_kafka import Producer
 class TransactionsProducer:
 
     def __init__(self, kafka_brokers: list[str], topic: str):
-        self.producer = Producer({'bootstrap.servers': ','.join(kafka_brokers)})
+        self.producer = Producer(
+            {
+                'bootstrap.servers': ','.join(kafka_brokers),
+                'client.id': "transactions_producer",
+             }
+        )
         self.topic = topic
 
     def send_transactions(self, transaction: dict) -> None:
