@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from airflow import DAG
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
@@ -10,6 +12,7 @@ default_args = {
 with DAG(
     dag_id="spark_transactions_producer",
     default_args=default_args,
+    start_date=datetime(2025, 8, 24),
     schedule_interval=None,
     catchup=False,
 ) as dag:
