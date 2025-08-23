@@ -4,8 +4,8 @@ This project is an **end-to-end system** for detecting fraudulent credit card tr
 It integrates **data engineering, model training, and experiment tracking** into a production-ready architecture.
 
 ![Status](https://img.shields.io/badge/Status-In%20Progress-orange)  
----
 
+---
 ## 📌 Architecture
 <p align="center">
   <img src="docs/architecture.jpg" alt="Architecture Diagram" width="600"/>
@@ -22,8 +22,6 @@ It integrates **data engineering, model training, and experiment tracking** into
 7. **Kafka Producer** -> Generates transactions and publishes to topic
 ---
 
-
-
 ## 🛠️ Tech Stack
 - **Apache Spark** for Batch + Stream processing  
 - **Apache Cassandra** as Database and Feature store 
@@ -32,5 +30,3 @@ It integrates **data engineering, model training, and experiment tracking** into
 - **MinIO** for Artifact storage 
 - **Postgres** for Metadata store  
 - **Docker Compose** for service orchestration
-
----
