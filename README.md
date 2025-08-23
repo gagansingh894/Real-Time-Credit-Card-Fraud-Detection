@@ -20,6 +20,7 @@ It integrates **data engineering, model training, and experiment tracking** into
    - **Postgres** → Stores MLflow experiment and run metadata.  
 6. **Stream Processing Job** -> Consumes new transactions from kafka stream, transform, predict and persist 
 7. **Kafka Producer** -> Generates transactions and publishes to topic
+8. **Airflow** -> Orchestrates ETL, ML training, Spark Streaming and Kafka Producer
 ---
 
 ## 🛠️ Tech Stack
@@ -29,4 +30,5 @@ It integrates **data engineering, model training, and experiment tracking** into
 - **MLflow** for Experiment tracking & model registry  
 - **MinIO** for Artifact storage 
 - **Postgres** for Metadata store  
+- **Airflow** for orchestrating spark jobs and kafka producer
 - **Docker Compose** for service orchestration
