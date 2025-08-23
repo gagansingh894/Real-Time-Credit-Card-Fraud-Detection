@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import mlflow
 
 from pyspark.ml import Pipeline, PipelineModel
@@ -109,7 +111,7 @@ def persist_artefacts(preprocessor_pipeline: PipelineModel, trained_model: Pipel
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
-    with mlflow.start_run():
+    with mlflow.start_run(run_name=f"fraud_detection_{str(datetime.now())}") as run:
         mlflow.log_metric("auc", metrics.auc)
         mlflow.log_metric("precision", metrics.precision)
         mlflow.log_metric("recall", metrics.recall)
