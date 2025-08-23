@@ -17,6 +17,12 @@ services:
     ports:
       - "9042:9042"   # CQL
       - "9160:9160"   # Thrift (optional, legacy)
+    healthcheck:
+      test: [ "CMD-SHELL", "cqlsh cassandra1 9042 -e 'describe cluster' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   cassandra2:
     image: cassandra:4.1
@@ -36,6 +42,12 @@ services:
     ports:
       - "9043:9042"   # CQL
       - "9161:9160"   # Thrift (optional, legacy)
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh cassandra1 9042 -e 'describe cluster' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   cassandra-init:
     image: cassandra:4.1
@@ -68,6 +80,11 @@ services:
     ports:
       - "7077:7077"
       - "8080:8080"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   spark-worker-1:
     image: bitnami/spark:3.5
@@ -80,6 +97,11 @@ services:
       - SPARK_WORKER_MEMORY=1G
     depends_on:
       - spark-master
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8081 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   spark-worker-2:
     image: bitnami/spark:3.5
@@ -92,6 +114,11 @@ services:
       - SPARK_WORKER_MEMORY=1G
     depends_on:
       - spark-master
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8081 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   minio:
     image: minio/minio:latest
@@ -105,6 +132,11 @@ services:
       - "9009:9009"
     volumes:
       - ./minio-data:/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   minio-init:
     image: minio/mc
@@ -126,11 +158,17 @@ services:
     image: postgres:15
     container_name: postgres
     environment:
-      POSTGRES_USER: mlflow
-      POSTGRES_PASSWORD: mlflow123
-      POSTGRES_DB: mlflow_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user123
+      POSTGRES_DB: metadata_db
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d metadata_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
 
@@ -141,7 +179,6 @@ services:
       - minio
       - postgres
     environment:
-      BACKEND_STORE_URI: postgresql+psycopg2://mlflow:mlflow@postgres:5432/mlflow
       ARTIFACT_ROOT: s3://mlflow/
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: minioadmin
@@ -152,7 +189,7 @@ services:
       bash -c "
         pip install mlflow[extras] psycopg2-binary &&
         mlflow server \
-          --backend-store-uri postgresql+psycopg2://mlflow:mlflow123@postgres:5432/mlflow_db \
+          --backend-store-uri postgresql+psycopg2://user:user123@postgres:5432/metadata_db \
           --default-artifact-root s3://mlflow/ \
       "
     ports:
@@ -178,6 +215,11 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -196,65 +238,94 @@ services:
     container_name: airflow_redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  airflow-init:
+    image: gagansingh894/airflow-spark:latest
+    container_name: airflow_init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://user:user123@postgres:5432/metadata_db
+    command: >
+      bash -c "
+        airflow db init &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+      "
 
   airflow-webserver:
-    image: bitnami/airflow:2.11
+    image: gagansingh894/airflow-spark:latest
     container_name: airflow_webserver
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__CORE__FERNET_KEY: 'replace_with_a_random_32_byte_key'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://mlflow:mlflow123@postgres:5432/airflow_db
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://user:user123@postgres:5432/metadata_db
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://mlflow:mlflow123@postgres:5432/airflow_db
-      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.0 mlflow==2.7.0"
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./plugins:/opt/airflow/plugins
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://user:user123@postgres:5432/metadata_db
     ports:
       - "8083:8080"
-    command: webserver
+    command: airflow webserver
+    restart: on-failure
 
   airflow-scheduler:
-    image: bitnami/airflow:2.11
+    image: gagansingh894/airflow-spark:latest
     container_name: airflow_scheduler
     depends_on:
-      - airflow-webserver
-      - redis
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__CORE__FERNET_KEY: 'replace_with_a_random_32_byte_key'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://mlflow:mlflow123@postgres:5432/airflow_db
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://user:user123@postgres:5432/metadata_db
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://mlflow:mlflow123@postgres:5432/airflow_db
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./plugins:/opt/airflow/plugins
-    command: scheduler
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://user:user123@postgres:5432/metadata_db
+    command: airflow scheduler
+    restart: on-failure
 
   airflow-worker:
-    image: bitnami/airflow:2.11
+    image: gagansingh894/airflow-spark:latest
     container_name: airflow_worker
     depends_on:
-      - airflow-webserver
-      - redis
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__CORE__FERNET_KEY: 'replace_with_a_random_32_byte_key'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://mlflow:mlflow123@postgres:5432/airflow_db
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://user:user123@postgres:5432/metadata_db
       AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://mlflow:mlflow123@postgres:5432/airflow_db
-      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.0 mlflow==2.7.0"
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./plugins:/opt/airflow/plugins
-    command: celery worker
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://user:user123@postgres:5432/metadata_db
+    command: airflow celery worker
+    restart: on-failure
+
 volumes:
   kafka-data:
