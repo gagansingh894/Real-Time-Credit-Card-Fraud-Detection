@@ -17,6 +17,7 @@ services:
     ports:
       - "9042:9042"   # CQL
       - "9160:9160"   # Thrift (optional, legacy)
+
   cassandra2:
     image: cassandra:4.1
     container_name: cassandra2
@@ -35,6 +36,7 @@ services:
     ports:
       - "9043:9042"   # CQL
       - "9161:9160"   # Thrift (optional, legacy)
+
   cassandra-init:
     image: cassandra:4.1
     depends_on:
@@ -56,6 +58,7 @@ services:
       "
     volumes:
       - ./creditcard.cql:/creditcard.cql
+
   spark-master:
     image: bitnami/spark:3.5
     container_name: spark-master
@@ -65,6 +68,7 @@ services:
     ports:
       - "7077:7077"
       - "8080:8080"
+
   spark-worker-1:
     image: bitnami/spark:3.5
     container_name: spark-worker-1
@@ -76,6 +80,7 @@ services:
       - SPARK_WORKER_MEMORY=1G
     depends_on:
       - spark-master
+
   spark-worker-2:
     image: bitnami/spark:3.5
     container_name: spark-worker-2
@@ -87,6 +92,7 @@ services:
       - SPARK_WORKER_MEMORY=1G
     depends_on:
       - spark-master
+
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -99,6 +105,7 @@ services:
       - "9009:9009"
     volumes:
       - ./minio-data:/data
+
   minio-init:
     image: minio/mc
     depends_on:
@@ -114,6 +121,7 @@ services:
         mc mb -p myminio/mlflow || echo 'Bucket already exists';
         mc ls myminio
       "
+
   postgres:
     image: postgres:15
     container_name: postgres
@@ -125,6 +133,7 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
+
   mlflow:
     image: python:3.11
     container_name: mlflow
@@ -150,6 +159,7 @@ services:
       - "5005:5005"
     volumes:
       - ./mlflow:/mlflow
+
   kafka:
     image: bitnami/kafka:4.0
     container_name: kafka
@@ -168,6 +178,7 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - kafka-data:/bitnami/kafka
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -179,5 +190,71 @@ services:
       - "8085:8080"
     depends_on:
       - kafka
+
+  redis:
+    image: redis:7
+    container_name: airflow_redis
+    ports:
+      - "6379:6379"
+
+  airflow-webserver:
+    image: bitnami/airflow:2.11
+    container_name: airflow_webserver
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'replace_with_a_random_32_byte_key'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://mlflow:mlflow123@postgres:5432/airflow_db
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://mlflow:mlflow123@postgres:5432/airflow_db
+      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.0 mlflow==2.7.0"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./plugins:/opt/airflow/plugins
+    ports:
+      - "8083:8080"
+    command: webserver
+
+  airflow-scheduler:
+    image: bitnami/airflow:2.11
+    container_name: airflow_scheduler
+    depends_on:
+      - airflow-webserver
+      - redis
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'replace_with_a_random_32_byte_key'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://mlflow:mlflow123@postgres:5432/airflow_db
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://mlflow:mlflow123@postgres:5432/airflow_db
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./plugins:/opt/airflow/plugins
+    command: scheduler
+
+  airflow-worker:
+    image: bitnami/airflow:2.11
+    container_name: airflow_worker
+    depends_on:
+      - airflow-webserver
+      - redis
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__FERNET_KEY: 'replace_with_a_random_32_byte_key'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://mlflow:mlflow123@postgres:5432/airflow_db
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://mlflow:mlflow123@postgres:5432/airflow_db
+      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.0 mlflow==2.7.0"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./plugins:/opt/airflow/plugins
+    command: celery worker
 volumes:
   kafka-data:
