@@ -10,6 +10,5 @@ if __name__ == "__main__":
 
     for transaction in transactions:
         producer.send_transactions(transaction)
-        break
 
     producer.flush()
