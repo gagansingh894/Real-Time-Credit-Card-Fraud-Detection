@@ -8,7 +8,6 @@ default_args = {
 }
 
 with DAG(
-    dag_display_name="spark_etl",
     dag_id="spark_etl",
     default_args=default_args,
     schedule_interval=None,

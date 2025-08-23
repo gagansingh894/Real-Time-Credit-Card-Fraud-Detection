@@ -8,7 +8,6 @@ default_args = {
 }
 
 with DAG(
-    dag_display_name="spark_transactions_processor",
     dag_id="spark_transactions_processor",
     default_args=default_args,
     schedule_interval=None,
