@@ -27,7 +27,7 @@ with DAG(
         verbose=True,
         conf={
             'spark.master': 'spark://spark-master:7077',
-            'spark.submit.deployMode': 'cluster'  # driver runs on cluster
+            'spark.submit.deployMode': 'client'
         }
     )
 
