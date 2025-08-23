@@ -19,6 +19,9 @@ ENV AIRFLOW_HOME=/opt/airflow
 # Copy DAGs into the container
 COPY ../dags/ ${AIRFLOW_HOME}/dags/
 
+# Copy Spark Jobs into container
+COPY ../spark_jobs/ ${AIRFLOW_HOME}/spark_jobs/
+
 # Switch back to airflow user
 USER airflow
 
