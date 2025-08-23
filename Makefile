@@ -10,6 +10,7 @@ help:
 # Start the cluster
 .PHONY: setup
 setup:
+	docker build -t gagansingh894/airflow-spark:latest -f build/Dockerfile.airflow .
 	docker-compose -f build/docker-compose.yml up -d
 
 # Stop the cluster
