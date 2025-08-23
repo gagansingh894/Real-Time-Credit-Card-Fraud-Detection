@@ -1,6 +1,5 @@
 import logging
 
-from spark_jobs.ml_training.artefacts import Artefacts
 from spark_jobs.ml_training.train import preprocessing_pipeline, balance_features_dataframe, train_model, \
     persist_artefacts, evaluate
 from spark_jobs.utils.config import CASSANDRA_KEYSPACE
