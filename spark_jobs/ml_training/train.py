@@ -7,7 +7,7 @@ from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClass
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import when
 
-from spark_jobs.schemas.metrics import Metrics
+from spark_jobs.ml_training.metrics import Metrics
 from spark_jobs.utils.session import get_spark_session
 from spark_jobs.utils.config import *
 
