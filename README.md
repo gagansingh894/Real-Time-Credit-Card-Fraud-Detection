@@ -1,18 +1,12 @@
-# 🚀 Credit Card Fraud Detection System
+# 🛡️ Credit Card Fraud Detection System
 
-This project is an **end-to-end system** for detecting fraudulent credit card transactions.  
-It integrates **data engineering, model training, and experiment tracking** into a production-ready architecture.  
-The system is being extended with **streaming ingestion (Kafka + Spark Streaming)** and a **UI for monitoring faulty transactions**.
+This project is an **end-to-end system** for detecting fraudulent credit card transactions. 
+It integrates **data engineering, model training, and experiment tracking** into a production-ready architecture.
 
+![Status](https://img.shields.io/badge/Status-In%20Progress-orange)  
 ---
 
-## 📌 Architecture  
-![Status](https://img.shields.io/badge/Status-In%20Progress-orange)  
-![Project](https://img.shields.io/badge/Project-Development-red)
-
-> ⚠️ **Note:** Project is currently in **active development**. Expect breaking changes and rapid iteration.
-
-### Current Flow  
+## 📌 Architecture
 <p align="center">
   <img src="docs/architecture.jpg" alt="Architecture Diagram" width="600"/>
 </p>
@@ -28,19 +22,15 @@ The system is being extended with **streaming ingestion (Kafka + Spark Streaming
 7. **Kafka Producer** -> Generates transactions and publishes to topic
 ---
 
-## 🔮 Planned Extensions
 
-- **Fraud Monitoring UI** → Dashboard for monitoring and reviewing suspicious transactions.  
-
----
 
 ## 🛠️ Tech Stack
-- **Apache Spark** (Batch + Streaming)  
-- **Apache Cassandra** (Database + Feature store)  
-- **Apache Kafka** (Real-time transaction streaming) 
-- **MLflow** (Experiment tracking & model registry)  
-- **MinIO** (Artifact storage)  
-- **Postgres** (Metadata store)  
-- **Docker Compose** (Service orchestration)  
+- **Apache Spark** for Batch + Stream processing  
+- **Apache Cassandra** as Database and Feature store 
+- **Apache Kafka** for Real-time transaction streaming 
+- **MLflow** for Experiment tracking & model registry  
+- **MinIO** for Artifact storage 
+- **Postgres** for Metadata store  
+- **Docker Compose** for service orchestration
 
 ---
