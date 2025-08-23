@@ -9,6 +9,7 @@ dependencies = [
     "confluent-kafka==2.10",
     "mlflow==3.2",
     "numpy==2.2",
+    "pydantic==2.10",
     "pyspark<=3.5.6",
 ]
 
