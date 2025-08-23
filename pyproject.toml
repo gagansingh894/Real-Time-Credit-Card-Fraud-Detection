@@ -5,6 +5,8 @@ description = "A cloud-native, end-to-end real-time fraud detection system lever
 requires-python = ">=3.11"
 authors = ["@gagansingh894"]
 dependencies = [
+    "apache-airflow==2.11",
+    "apache-airflow-providers-apache-spark>=5.3.2",
     "cassandra-driver<=3.29",
     "confluent-kafka==2.10",
     "mlflow==3.2",
