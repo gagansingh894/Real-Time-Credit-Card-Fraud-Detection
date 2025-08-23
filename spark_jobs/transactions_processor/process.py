@@ -1,7 +1,9 @@
 import mlflow
 from pyspark.ml import PipelineModel
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import from_json, col, to_timestamp, broadcast, round
+from pyspark.sql.functions import from_json, col, to_timestamp, broadcast, round, datediff, current_date, to_date
+from pyspark.sql.types import IntegerType
+
 from spark_jobs.schemas import transaction_schema
 from spark_jobs.utils import haversine_distance
 from spark_jobs.utils.config import (
@@ -19,12 +21,14 @@ def get_artefacts() -> (PipelineModel, PipelineModel):
     """
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+
     runs = mlflow.search_runs(experiment_names=[MLFLOW_EXPERIMENT_NAME])
-    run_id = runs[0].info.run_id
+    run_id = runs['run_id'][0]
+    run_uri = f'runs:/{run_id}'
 
 
-    preprocessor = mlflow.spark.load_model(f"runs:/{run_id}/preprocessor")
-    model = mlflow.spark.load_model(f"runs:/{run_id}/model")
+    preprocessor = mlflow.spark.load_model(f"{run_uri}/preprocessor")
+    model = mlflow.spark.load_model(f"{run_uri}/model")
     return preprocessor, model
 
 
@@ -35,11 +39,12 @@ def read_and_cache_customer_data(spark: SparkSession) -> DataFrame:
     customer_df = (
         spark.read
         .format("org.apache.spark.sql.cassandra")
-        .options(table_name="customers", keyspace=CASSANDRA_KEYSPACE)
+        .options(table="customers", keyspace=CASSANDRA_KEYSPACE)
         .load()
+        .withColumn("age", (datediff(current_date(), to_date(col("dob"))) / 365).cast(IntegerType()))
         .select("cc_num", "age", "lat", "long")
     )
-    customer_df.cache()
+
     return customer_df
 
 
@@ -69,8 +74,8 @@ def write_to_cassandra(batch_df: DataFrame, _: int):
     """
     Writes predictions to Cassandra
     """
-    fraud_df = batch_df.filter(col("is_fraud") == 1.0)
-    non_fraud_df = batch_df.filter(col("is_fraud") != 1.0)
+    fraud_df = batch_df.filter(col("is_fraud") == 1.0).select(PROCESSED_DF_COLUMNS)
+    non_fraud_df = batch_df.filter(col("is_fraud") != 1.0).select(PROCESSED_DF_COLUMNS)
 
     fraud_df.write.format("org.apache.spark.sql.cassandra") \
         .mode("append") \
@@ -92,7 +97,7 @@ def preprocess_predict_persist(customer_df: DataFrame, parsed_df: DataFrame, pre
             "distance",
             round(haversine_distance(col("lat"), col("long"), col("merch_lat"), col("merch_long")), 2)
         )
-        .select(PROCESSED_DF_COLUMNS)
+        .select(PROCESSED_DF_COLUMNS[:-1])
     )
 
     predictions_df = model.transform(preprocessor.transform(processed_df)).withColumnRenamed("prediction", "is_fraud")
