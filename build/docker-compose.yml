@@ -19,8 +19,8 @@ services:
       - "9160:9160"   # Thrift (optional, legacy)
     healthcheck:
       test: [ "CMD-SHELL", "cqlsh cassandra1 9042 -e 'describe cluster' || exit 1" ]
-      interval: 10s
-      timeout: 5s
+      interval: 20s
+      timeout: 10s
       retries: 5
       start_period: 20s
 
@@ -44,16 +44,18 @@ services:
       - "9161:9160"   # Thrift (optional, legacy)
     healthcheck:
       test: ["CMD-SHELL", "cqlsh cassandra1 9042 -e 'describe cluster' || exit 1"]
-      interval: 10s
-      timeout: 5s
+      interval: 20s
+      timeout: 10s
       retries: 5
       start_period: 20s
 
   cassandra-init:
     image: cassandra:4.1
     depends_on:
-      - cassandra1
-      - cassandra2
+      cassandra1:
+        condition: service_healthy
+      cassandra2:
+        condition: service_healthy
     entrypoint: >
       bash -c "
         echo 'Waiting for Cassandra nodes...';
