@@ -10,7 +10,7 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set JAVA_HOME
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Set Airflow home
@@ -21,6 +21,9 @@ COPY ../dags/ ${AIRFLOW_HOME}/dags/
 
 # Copy Spark Jobs into container
 COPY ../spark_jobs/ ${AIRFLOW_HOME}/spark_jobs/
+
+# Copy Kafka producer job
+COPY ../transactions_processor/ ${AIRFLOW_HOME}/transactions_processor/
 
 # Switch back to airflow user
 USER airflow
