@@ -23,7 +23,7 @@ COPY ../dags/ ${AIRFLOW_HOME}/dags/
 COPY ../spark_jobs/ ${AIRFLOW_HOME}/spark_jobs/
 
 # Copy Kafka producer job
-COPY ../transactions_processor/ ${AIRFLOW_HOME}/transactions_processor/
+COPY ../transactions_producer/ ${AIRFLOW_HOME}/transactions_producer/
 
 # Switch back to airflow user
 USER airflow
