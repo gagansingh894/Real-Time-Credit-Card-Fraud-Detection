@@ -1,6 +1,6 @@
 CREATE KEYSPACE IF NOT EXISTS creditcard
 WITH replication = {
-'class': 'SimpleStrategy', 'replication_factor': 2
+'class': 'SimpleStrategy', 'replication_factor': 1
 };
 
 USE creditcard;
