@@ -1,4 +1,4 @@
-CASSANDRA_HOST = 'cassandra'
+CASSANDRA_HOST = 'cassandra1, cassandra2'
 CASSANDRA_PORT = 9042
 
 CUSTOMER_DATA_PATH = '/opt/airflow/spark_jobs/data/customer.csv'
