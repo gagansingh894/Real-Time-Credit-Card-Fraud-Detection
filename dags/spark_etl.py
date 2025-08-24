@@ -6,7 +6,7 @@ from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOpe
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    'retries': 1,
+    'retries': 2,
 }
 
 with DAG(
@@ -18,17 +18,21 @@ with DAG(
 ) as dag:
     spark_etl_task = SparkSubmitOperator(
         task_id="spark_submit_etl",
-        application="/opt/airflow/spark_jobs/etl/main.py",
         conn_id="spark_default",
         name="spark_cassandra_etl",
-        executor_memory='512m',
-        driver_memory='512m',
-        total_executor_cores=2,
         verbose=True,
         conf={
             'spark.master': 'spark://spark-master:7077',
             'spark.submit.deployMode': 'client'
-        }
+        },
+        java_class=None,
+        packages=None,
+        application_args=[],
+        executor_cores=None,
+        executor_memory=None,
+        driver_memory=None,
+        driver_class_path=None,
+        py_executable="python3 -m spark_jobs.etl.main"
     )
 
 

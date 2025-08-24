@@ -18,17 +18,21 @@ with DAG(
 ) as dag:
     spark_ml_training_task = SparkSubmitOperator(
         task_id="spark_submit_ml_training",
-        application="/opt/airflow/spark_jobs/ml_training/main.py",
         conn_id="spark_default",
         name="spark_random_forest_training",
-        executor_memory='512m',
-        driver_memory='512m',
-        total_executor_cores=2,
         verbose=True,
         conf={
             'spark.master': 'spark://spark-master:7077',
             'spark.submit.deployMode': 'client'
-        }
+        },
+        java_class=None,
+        packages=None,
+        application_args=[],
+        executor_cores=None,
+        executor_memory=None,
+        driver_memory=None,
+        driver_class_path=None,
+        py_executable="python3 -m spark_jobs.ml_training.main"
     )
 
 
