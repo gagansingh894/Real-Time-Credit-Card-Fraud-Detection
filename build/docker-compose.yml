@@ -68,6 +68,7 @@ services:
           sleep 5;
         done;
         echo 'Nodes are ready. Running CQL scripts...';
+        cqlsh cassandra1 9042 -f /creditcard.cql
         cqlsh cassandra2 9042 -f /creditcard.cql
       "
     volumes:
