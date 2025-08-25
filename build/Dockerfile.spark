@@ -1,5 +1,5 @@
 # Base image: Bitnami Spark 3.5
-FROM bitnami/spark:3.5
+FROM bitnami/spark:3.5.1
 
 # Switch to root to install packages
 USER root
@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir \
     "mlflow==3.2" \
     "numpy==2.2" \
     "pydantic==2.10" \
-    "pyspark<=3.5.6"
+    "pyspark<=3.5.1"
 
 # Back to non-root for runtime
 USER 1001
