@@ -12,7 +12,9 @@ with DAG(
         task_id="spark_submit_transactions_processor",
         conn_id="spark_master",
         name="spark_transactions_processor",
-        application="/opt/bitnami/spark/transactions_processor/main.py",
+        application="./spark_jobs/transactions_processor/main.py",
+        packages="com.datastax.spark:spark-cassandra-connector_2.12:3.5.0",
+        start_date=datetime.now(),
         verbose=True,
     )
 

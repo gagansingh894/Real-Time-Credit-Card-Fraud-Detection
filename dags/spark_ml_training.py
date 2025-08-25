@@ -11,8 +11,10 @@ with DAG(
     spark_ml_training_task = SparkSubmitOperator(
         task_id="spark_submit_ml_training",
         conn_id="spark_master",
-        application="/opt/bitnami/spark/spark_jobs/ml_training/main.py",
         name="spark_random_forest_training",
+        application="./spark_jobs/ml_training/main.py",
+        packages="com.datastax.spark:spark-cassandra-connector_2.12:3.5.0",
+        start_date=datetime.now(),
         verbose=True,
     )
 

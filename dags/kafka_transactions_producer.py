@@ -14,7 +14,7 @@ default_args = {
 with DAG(
     dag_id="kafka_transactions_producer",
     default_args=default_args,
-    start_date=datetime(2025, 8, 24),
+    start_date=datetime.now(),
     schedule_interval=None,
     catchup=False,
 ) as dag:
