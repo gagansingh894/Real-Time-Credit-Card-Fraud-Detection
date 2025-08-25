@@ -17,6 +17,13 @@ services:
     ports:
       - "9042:9042"   # CQL
       - "9160:9160"   # Thrift (optional, legacy)
+    healthcheck:
+      test: [ "CMD-SHELL", "cqlsh cassandra1 9042 -e 'describe cluster' || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
   cassandra2:
     image: cassandra:4.1
     container_name: cassandra2
@@ -35,11 +42,20 @@ services:
     ports:
       - "9043:9042"   # CQL
       - "9161:9160"   # Thrift (optional, legacy)
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh cassandra1 9042 -e 'describe cluster' || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
   cassandra-init:
     image: cassandra:4.1
     depends_on:
-      - cassandra1
-      - cassandra2
+      cassandra1:
+        condition: service_healthy
+      cassandra2:
+        condition: service_healthy
     entrypoint: >
       bash -c "
         echo 'Waiting for Cassandra nodes...';
@@ -53,11 +69,13 @@ services:
         done;
         echo 'Nodes are ready. Running CQL scripts...';
         cqlsh cassandra1 9042 -f /creditcard.cql
+        cqlsh cassandra2 9042 -f /creditcard.cql
       "
     volumes:
       - ./creditcard.cql:/creditcard.cql
+
   spark-master:
-    image: bitnami/spark:3.5
+    image: gagansingh894/spark:latest
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -65,40 +83,72 @@ services:
     ports:
       - "7077:7077"
       - "8080:8080"
+    volumes:
+      - .././spark_jobs:/opt/bitnami/spark/spark_jobs
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   spark-worker-1:
-    image: bitnami/spark:3.5
+    image: gagansingh894/spark:latest
     container_name: spark-worker-1
     ports:
       - "8081:8081"
+    volumes:
+      - .././spark_jobs:/opt/bitnami/spark/spark_jobs
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_MEMORY=512m
+      - SPARK_WORKER_CORES=2
     depends_on:
       - spark-master
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8081 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   spark-worker-2:
-    image: bitnami/spark:3.5
+    image: gagansingh894/spark:latest
     container_name: spark-worker-2
     ports:
       - "8082:8081"
+    volumes:
+      - .././spark_jobs:/opt/bitnami/spark/spark_jobs
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_MEMORY=512m
+      - SPARK_WORKER_CORES=2
     depends_on:
       - spark-master
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8081 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   minio:
     image: minio/minio:latest
     container_name: minio
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
     command: server /data --console-address ":9009"
     ports:
       - "9000:9000"
       - "9009:9009"
     volumes:
       - ./minio-data:/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   minio-init:
     image: minio/mc
     depends_on:
@@ -114,17 +164,25 @@ services:
         mc mb -p myminio/mlflow || echo 'Bucket already exists';
         mc ls myminio
       "
+
   postgres:
     image: postgres:15
     container_name: postgres
     environment:
-      POSTGRES_USER: mlflow
-      POSTGRES_PASSWORD: mlflow123
-      POSTGRES_DB: mlflow_db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=user123
+      - POSTGRES_DB=metadata_db
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d metadata_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
+
   mlflow:
     image: python:3.11
     container_name: mlflow
@@ -132,52 +190,202 @@ services:
       - minio
       - postgres
     environment:
-      BACKEND_STORE_URI: postgresql+psycopg2://mlflow:mlflow@postgres:5432/mlflow
-      ARTIFACT_ROOT: s3://mlflow/
-      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
-      MLFLOW_HOST: 0.0.0.0
-      MLFLOW_PORT: 5005
+      - ARTIFACT_ROOT=s3://mlflow/
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MLFLOW_HOST=0.0.0.0
+      - MLFLOW_PORT=5005
     command: >
       bash -c "
         pip install mlflow[extras] psycopg2-binary &&
         mlflow server \
-          --backend-store-uri postgresql+psycopg2://mlflow:mlflow123@postgres:5432/mlflow_db \
+          --backend-store-uri postgresql+psycopg2://user:user123@postgres:5432/metadata_db \
           --default-artifact-root s3://mlflow/ \
       "
     ports:
       - "5005:5005"
     volumes:
       - ./mlflow:/mlflow
-  kafka:
+
+  kafka1:
     image: bitnami/kafka:4.0
-    container_name: kafka
+    container_name: kafka1
     ports:
-      - "9092:9092"   # broker port
-      - "9093:9093"   # controller port
+      - "9094:9094"
     environment:
-      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      # KRaft Settings
       - KAFKA_CFG_NODE_ID=1
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-      - ALLOW_PLAINTEXT_LISTENER=yes
-    volumes:
-      - kafka-data:/bitnami/kafka
+      # listener Settings
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+        # cluster Settings
+      - KAFKA_CLUSTER_ID=CLUSTER_ID_1
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+
+  kafka2:
+    image: bitnami/kafka:4.0
+    container_name: kafka2
+    ports:
+      - "9095:9095"
+    environment:
+      # KRaft Settings
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # listener Settings
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9095
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9095
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+        # cluster Settings
+      - KAFKA_CLUSTER_ID=CLUSTER_ID_1
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+
+  kafka3:
+    image: bitnami/kafka:4.0
+    container_name: kafka3
+    ports:
+      - "9096:9096"
+    environment:
+      # KRaft Settings
+      - KAFKA_CFG_NODE_ID=3
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # listener Settings
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9096
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9096
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+        # cluster Settings
+      - KAFKA_CLUSTER_ID=CLUSTER_ID_1
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     environment:
-      KAFKA_CLUSTERS_0_NAME: "local"
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"  # Use the container name
-      KAFKA_CLUSTERS_0_ZOOKEEPER: ""                    # Not needed in KRaft mode
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka1:9092,kafka2:9092,kafka3:9092
     ports:
       - "8085:8080"
     depends_on:
-      - kafka
-volumes:
-  kafka-data:
+      - kafka1
+      - kafka2
+      - kafka3
+
+  redis:
+    image: redis:7
+    container_name: airflow_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  airflow-init:
+    image: gagansingh894/airflow-spark:latest
+    container_name: airflow_init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
+      - PYTHONPATH=/opt/airflow
+    command: >
+      bash -c "
+        airflow db init &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+        airflow connections add spark_master --conn-type spark --conn-host spark-master --conn-port 7077 --conn-extra '{"deploy_mode": "cluster"}'
+      "
+
+  airflow-webserver:
+    image: gagansingh894/airflow-spark:latest
+    container_name: airflow_webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
+      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
+      - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://user:user123@postgres:5432/metadata_db
+      - PYTHONPATH=/opt/airflow
+    ports:
+      - "8083:8080"
+    command: airflow webserver
+    restart: on-failure
+
+  airflow-scheduler:
+    image: gagansingh894/airflow-spark:latest
+    container_name: airflow_scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
+      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
+      - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://user:user123@postgres:5432/metadata_db
+      - PYTHONPATH=/opt/airflow
+    command: airflow scheduler
+    restart: on-failure
+
+  airflow-worker:
+    image: gagansingh894/airflow-spark:latest
+    container_name: airflow_worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
+      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
+      - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://user:user123@postgres:5432/metadata_db
+      - PYTHONPATH=/opt/airflow
+    command: airflow celery worker
+    restart: on-failure

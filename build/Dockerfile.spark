@@ -1,0 +1,31 @@
+# Base image: Bitnami Spark 3.5
+FROM bitnami/spark:3.5
+
+# Switch to root to install packages
+USER root
+
+# Set Spark home (already default in Bitnami Spark)
+ENV SPARK_HOME=/opt/bitnami/spark
+WORKDIR $SPARK_HOME
+
+# Copy DAGs into the container
+COPY ../dags/ ${SPARK_HOME}/dags/
+
+# Copy Spark Jobs into container
+COPY ../spark_jobs/ ${SPARK_HOME}/spark_jobs/
+
+# Copy Kafka producer job
+COPY ../transactions_producer/ ${SPARK_HOME}/transactions_producer/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    "cassandra-driver<=3.29" \
+    "confluent-kafka==2.10" \
+    "flask-session>=0.5.0" \
+    "mlflow==3.2" \
+    "numpy==2.2" \
+    "pydantic==2.10" \
+    "pyspark<=3.5.6"
+
+# Back to non-root for runtime
+USER 1001
