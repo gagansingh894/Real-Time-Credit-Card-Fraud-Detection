@@ -18,21 +18,14 @@ with DAG(
 ) as dag:
     spark_stream_processing_task = SparkSubmitOperator(
         task_id="spark_submit_transactions_processor",
-        conn_id="spark_default",
+        conn_id="spark_master",
         name="spark_transactions_processor",
+        application="/opt/bitnami/spark/transactions_processor/main.py",
         verbose=True,
         conf={
             'spark.master': 'spark://spark-master:7077',
-            'spark.submit.deployMode': 'client'
+            'spark.submit.deployMode': 'cluster'
         },
-        java_class=None,
-        packages=None,
-        application_args=[],
-        executor_cores=None,
-        executor_memory=None,
-        driver_memory=None,
-        driver_class_path=None,
-        py_executable="python3 -m spark_jobs.transactions_processor.main"
     )
 
 

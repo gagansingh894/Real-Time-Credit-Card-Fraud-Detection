@@ -18,21 +18,14 @@ with DAG(
 ) as dag:
     spark_ml_training_task = SparkSubmitOperator(
         task_id="spark_submit_ml_training",
-        conn_id="spark_default",
+        conn_id="spark_master",
+        application="/opt/bitnami/spark/spark_jobs/ml_training/main.py",
         name="spark_random_forest_training",
         verbose=True,
         conf={
             'spark.master': 'spark://spark-master:7077',
-            'spark.submit.deployMode': 'client'
+            'spark.submit.deployMode': 'cluster'
         },
-        java_class=None,
-        packages=None,
-        application_args=[],
-        executor_cores=None,
-        executor_memory=None,
-        driver_memory=None,
-        driver_class_path=None,
-        py_executable="python3 -m spark_jobs.ml_training.main"
     )
 
 
