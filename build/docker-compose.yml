@@ -52,10 +52,14 @@ services:
   cassandra-init:
     image: cassandra:4.1
     depends_on:
-      cassandra1:
-        condition: service_healthy
-      cassandra2:
-        condition: service_healthy
+      - cassandra1
+      - cassandra2
+      - spark-master
+      - spark-worker-1
+      - spark-worker-2
+      - kafka1
+      - kafka2
+      - kafka3
     entrypoint: >
       bash -c "
         echo 'Waiting for Cassandra nodes...';
@@ -84,6 +88,7 @@ services:
       - "7077:7077"
       - "8080:8080"
     volumes:
+      - spark-data:/bitnami
       - .././spark_jobs:/opt/bitnami/spark/spark_jobs
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080 || exit 1" ]
@@ -97,11 +102,12 @@ services:
     ports:
       - "8081:8081"
     volumes:
+      - spark-data:/bitnami
       - .././spark_jobs:/opt/bitnami/spark/spark_jobs
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=512m
+      - SPARK_WORKER_MEMORY=1g
       - SPARK_WORKER_CORES=2
     depends_on:
       - spark-master
@@ -117,11 +123,11 @@ services:
     ports:
       - "8082:8081"
     volumes:
-      - .././spark_jobs:/opt/bitnami/spark/spark_jobs
+      - spark-data:/bitnami
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=512m
+      - SPARK_WORKER_MEMORY=1g
       - SPARK_WORKER_CORES=2
     depends_on:
       - spark-master
@@ -300,7 +306,7 @@ services:
     restart: on-failure
 
   airflow-init:
-    image: gagansingh894/airflow-spark:latest
+    image: gagansingh894/airflow:latest
     container_name: airflow_init
     depends_on:
       postgres:
@@ -313,14 +319,14 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
       - PYTHONPATH=/opt/airflow
     command: >
-      bash -c "
+      bash -c '
         airflow db init &&
-        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
-        airflow connections add spark_master --conn-type spark --conn-host spark-master --conn-port 7077 --conn-extra '{"deploy_mode": "cluster"}'
-      "
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
+        airflow connections add spark_master --conn-type spark --conn-host spark-master --conn-port 7077
+      '
 
   airflow-webserver:
-    image: gagansingh894/airflow-spark:latest
+    image: gagansingh894/airflow:latest
     container_name: airflow_webserver
     depends_on:
       postgres:
@@ -332,7 +338,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
-      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__FERNET_KEY=Ej8fuUK4a4qDwLm1PDnUSjgtpgk_nj2Oq6qFm5DovXI=
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
@@ -345,7 +351,7 @@ services:
     restart: on-failure
 
   airflow-scheduler:
-    image: gagansingh894/airflow-spark:latest
+    image: gagansingh894/airflow:latest
     container_name: airflow_scheduler
     depends_on:
       postgres:
@@ -357,7 +363,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
-      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__FERNET_KEY=Ej8fuUK4a4qDwLm1PDnUSjgtpgk_nj2Oq6qFm5DovXI=
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
@@ -368,7 +374,7 @@ services:
     restart: on-failure
 
   airflow-worker:
-    image: gagansingh894/airflow-spark:latest
+    image: gagansingh894/airflow:latest
     container_name: airflow_worker
     depends_on:
       postgres:
@@ -380,7 +386,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
-      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__FERNET_KEY=Ej8fuUK4a4qDwLm1PDnUSjgtpgk_nj2Oq6qFm5DovXI=
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
@@ -389,3 +395,6 @@ services:
       - PYTHONPATH=/opt/airflow
     command: airflow celery worker
     restart: on-failure
+
+volumes:
+  spark-data:

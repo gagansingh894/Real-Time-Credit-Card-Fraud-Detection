@@ -17,12 +17,31 @@ It integrates **data engineering, model training, and experiment tracking** into
    make setup
    ```
 3. Wait for all containers (Airflow, Spark, Kafka, Cassandra, MLflow, etc.) to start.
-4. Trigger workflows from the Airflow UI or via the CLI.
+4. Login to [Airflow UI](http://0.0.0.0:8083) using `admin` as ***username*** and ***password*** to trigger workflows
+
+![airflow_dags.png](docs/airflow_dags.png)
+
+**UI Links**
+- Airflow UI: http://0.0.0.0:8083
+- Kafka UI: http://0.0.0.0:8085
+- Spark Master: http://0.0.0.0:8080
+- MLFlow: http://0.0.0.0:5005
+
 
 **⚠️ Warning: Resource Usage**
 
 Running this system locally with Docker Compose is memory intensive.  
-At least **18 GB of RAM** is recommended to run all services smoothly.
+At least **10 GB of RAM** is required to run all services smoothly.
+
+**⚠️ Cassandra Initialization**
+
+The Cassandra cluster may take some time to become fully available after startup. The cassandra-init service runs initialization scripts (creditcard.cql) once the nodes respond.
+
+However, in some cases (e.g., slow startup or schema agreement delays), you may need to manually re-run the initialization script:
+
+```bash
+   make cassandra-init
+```
 
 ---
 ## 📌 Architecture
