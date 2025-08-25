@@ -14,6 +14,10 @@ setup:
 	docker build -t gagansingh894/spark:latest -f build/Dockerfile.spark .
 	docker-compose -f build/docker-compose.yml up -d
 
+# Manual init cassandra cluster
+cassandra-init:
+	docker-compose -f build/docker-compose.yml run cassandra-init
+
 # Stop the cluster
 .PHONY: teardown
 teardown:
