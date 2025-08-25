@@ -84,12 +84,13 @@ services:
     environment:
       - SPARK_MODE=master
       - SPARK_MASTER_HOST=spark-master
+      - PYTHONPATH=/opt/bitnami/spark
     ports:
       - "7077:7077"
       - "8080:8080"
     volumes:
       - spark-data:/bitnami
-      - .././spark_jobs:/opt/bitnami/spark/spark_jobs
+      - .././data:/opt/shared/data
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080 || exit 1" ]
       interval: 10s
@@ -103,12 +104,13 @@ services:
       - "8081:8081"
     volumes:
       - spark-data:/bitnami
-      - .././spark_jobs:/opt/bitnami/spark/spark_jobs
+      - .././data:/opt/shared/data
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=1g
       - SPARK_WORKER_CORES=2
+      - PYTHONPATH=/opt/bitnami/spark
     depends_on:
       - spark-master
     healthcheck:
@@ -124,11 +126,13 @@ services:
       - "8082:8081"
     volumes:
       - spark-data:/bitnami
+      - .././data:/opt/shared/data
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_MEMORY=1g
       - SPARK_WORKER_CORES=2
+      - PYTHONPATH=/opt/bitnami/spark
     depends_on:
       - spark-master
     healthcheck:
@@ -348,6 +352,8 @@ services:
     ports:
       - "8083:8080"
     command: airflow webserver
+    volumes:
+      - .././data:/opt/shared/data
     restart: on-failure
 
   airflow-scheduler:
@@ -371,6 +377,8 @@ services:
       - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://user:user123@postgres:5432/metadata_db
       - PYTHONPATH=/opt/airflow
     command: airflow scheduler
+    volumes:
+      - .././data:/opt/shared/data
     restart: on-failure
 
   airflow-worker:
@@ -393,6 +401,8 @@ services:
       - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
       - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://user:user123@postgres:5432/metadata_db
       - PYTHONPATH=/opt/airflow
+    volumes:
+      - .././data:/opt/shared/data
     command: airflow celery worker
     restart: on-failure
 
