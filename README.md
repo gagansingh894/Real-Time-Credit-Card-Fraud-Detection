@@ -33,6 +33,16 @@ It integrates **data engineering, model training, and experiment tracking** into
 Running this system locally with Docker Compose is memory intensive.  
 At least **10 GB of RAM** is required to run all services smoothly.
 
+**⚠️ Cassandra Initialization**
+
+The Cassandra cluster may take some time to become fully available after startup. The cassandra-init service runs initialization scripts (creditcard.cql) once the nodes respond.
+
+However, in some cases (e.g., slow startup or schema agreement delays), you may need to manually re-run the initialization script:
+
+```bash
+   make cassandra-init
+```
+
 ---
 ## 📌 Architecture
 <p align="center">
