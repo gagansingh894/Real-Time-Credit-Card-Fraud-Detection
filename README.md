@@ -5,6 +5,25 @@ It integrates **data engineering, model training, and experiment tracking** into
 
 ![Status](https://img.shields.io/badge/Status-In%20Progress-orange)  
 
+# 🚀 How to Run
+
+1. Clone the repository and move into the project root:
+   ```bash
+   git clone https://github.com/gagansingh894/Real-Time-Credit-Card-Fraud-Detection.git
+   cd Real-Time-Credit-Card-Fraud-Detection
+   ```
+2. Start all services using Docker Compose (ensure you have docker compose installed)
+   ```bash
+   make setup
+   ```
+3. Wait for all containers (Airflow, Spark, Kafka, Cassandra, MLflow, etc.) to start.
+4. Trigger workflows from the Airflow UI or via the CLI.
+
+**⚠️ Warning: Resource Usage**
+
+Running this system locally with Docker Compose is memory intensive.  
+At least **18 GB of RAM** is recommended to run all services smoothly.
+
 ---
 ## 📌 Architecture
 <p align="center">
@@ -24,6 +43,7 @@ It integrates **data engineering, model training, and experiment tracking** into
 ---
 
 ## 🛠️ Tech Stack
+- **Python** for code
 - **Apache Spark** for Batch + Stream processing  
 - **Apache Cassandra** as Database and Feature store 
 - **Apache Kafka** for Real-time transaction streaming 
