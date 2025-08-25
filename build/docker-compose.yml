@@ -313,11 +313,11 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
       - PYTHONPATH=/opt/airflow
     command: >
-      bash -c "
+      bash -c '
         airflow db init &&
-        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
-        airflow connections add spark_master --conn-type spark --conn-host spark-master --conn-port 7077 --conn-extra '{"spark":{"deploy_mode":"cluster"}}'
-      "
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
+        airflow connections add spark_master --conn-type spark --conn-host spark-master --conn-port 7077 --conn-extra "{\"spark\":{\"deploy_mode\":\"cluster\"}}"
+      '
 
   airflow-webserver:
     image: gagansingh894/airflow-spark:latest
@@ -332,7 +332,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
-      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__FERNET_KEY=Ej8fuUK4a4qDwLm1PDnUSjgtpgk_nj2Oq6qFm5DovXI=
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
@@ -357,7 +357,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
-      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__FERNET_KEY=Ej8fuUK4a4qDwLm1PDnUSjgtpgk_nj2Oq6qFm5DovXI=
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
@@ -380,7 +380,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key
-      - AIRFLOW__CORE__FERNET_KEY=replace_with_a_random_32_byte_key
+      - AIRFLOW__CORE__FERNET_KEY=Ej8fuUK4a4qDwLm1PDnUSjgtpgk_nj2Oq6qFm5DovXI=
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:user123@postgres:5432/metadata_db
